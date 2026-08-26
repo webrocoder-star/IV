@@ -40,12 +40,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [pageTitle, setPageTitle] = useState("Admin Panel");
 
   useEffect(() => {
+    if (pathname === "/admin/login") {
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.replace("/admin/login"); return; }
       setEmail(user.email ?? "Admin");
       setLoading(false);
     });
-  }, []);
+  }, [pathname, router, supabase]);
 
   useEffect(() => {
     const allItems = NAV_SECTIONS.flatMap(s => s.items);
@@ -58,6 +63,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/admin/login");
     router.refresh();
   };
+
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
