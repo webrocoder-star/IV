@@ -1,0 +1,51 @@
+{
+  "name": "iv-attendance",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/multer": "^2.2.0",
+    "@types/papaparse": "^5.5.2",
+    "bcryptjs": "^3.0.3",
+    "exceljs": "^4.4.0",
+    "multer": "^2.2.0",
+    "next": "16.3.3",
+    "papaparse": "^5.7.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "resend": "^6.22.1",
+    "ts-node": "^10.9.2",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.4.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.3",
+    "prisma": "^6.4.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "unrs-resolver@1.12.2": true,
+    "prisma@6.4.1": true,
+    "@prisma/client@6.4.1": true,
+    "@prisma/engines@6.4.1": true
+  },
+  "prisma": {
+    "seed": "node --import ts-node/register prisma/seed.ts"
+  }
+}

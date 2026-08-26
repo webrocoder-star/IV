@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum EmployeeStatus {
+  active
+  inactive
+}
+
+enum AdminRole {
+  main_admin
+  admin
+}
+
+enum AdminStatus {
+  active
+  inactive
+}
+
+enum AttendanceType {
+  WFO
+  WFH
+}
+
+enum ShiftRequestStatus {
+  pending
+  approved
+  denied
+}
+
+enum LeaveStatus {
+  pending
+  approved
+  denied
+}
+
+model Employee {
+  id            Int            @id @default(autoincrement())
+  sapId         String         @unique @map("sap_id")
+  employeeName  String         @map("employee_name")
+  defaultShift  String?        @map("default_shift")
+  tlName        String?        @map("tl_name")
+  tlEmail       String?        @map("tl_email")
+  status        EmployeeStatus @default(active)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  attendance         Attendance[]
+  shiftSchedules     ShiftSchedule[]
+  shiftChangeRequests ShiftChangeRequest[]
+  leaveRecords       LeaveRecord[]
+
+  @@map("employees")
+}
+
+model Admin {
+  id           Int         @id @default(autoincrement())
+  adminName    String      @map("admin_name")
+  loginId      String      @unique @map("login_id")
+  passwordHash String      @map("password_hash")
+  role         AdminRole   @default(admin)
+  status       AdminStatus @default(active)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+model Attendance {
+  id              Int            @id @default(autoincrement())
+  sapId           String         @map("sap_id")
+  attendanceDate  DateTime       @map("attendance_date") @db.Date
+  attendanceType  AttendanceType @map("attendance_type")
+  shift           String
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [sapId], references: [sapId])
+
+  @@unique([sapId, attendanceDate], name: "unique_attendance_per_day")
+  @@map("attendance")
+}
+
+model Shift {
+  id         Int     @id @default(autoincrement())
+  shiftLabel String  @unique @map("shift_label")
+  startTime  String? @map("start_time")
+  endTime    String? @map("end_time")
+  colorHex   String? @map("color_hex")
+  isActive   Boolean @default(true) @map("is_active")
+  sortOrder  Int     @default(0) @map("sort_order")
+
+  @@map("shifts")
+}
+
+model ShiftSchedule {
+  id            Int      @id @default(autoincrement())
+  sapId         String   @map("sap_id")
+  weekNumber    Int?     @map("week_number")
+  month         Int?
+  year          Int?
+  shiftLabel    String   @map("shift_label")
+  effectiveFrom DateTime? @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [sapId], references: [sapId])
+
+  @@map("shift_schedules")
+}
+
+model ShiftChangeRequest {
+  id              Int                @id @default(autoincrement())
+  sapId           String             @map("sap_id")
+  employeeName    String             @map("employee_name")
+  requestedDate   DateTime           @map("requested_date") @db.Date
+  currentShift    String             @map("current_shift")
+  requestedShift  String             @map("requested_shift")
+  tlName          String?            @map("tl_name")
+  tlEmail         String?            @map("tl_email")
+  reason          String?
+  status          ShiftRequestStatus @default(pending)
+  approvedBy      String?            @map("approved_by")
+  approvedAt      DateTime?          @map("approved_at")
+  rejectionReason String?            @map("rejection_reason")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [sapId], references: [sapId])
+
+  @@map("shift_change_requests")
+}
+
+model Holiday {
+  id          Int      @id @default(autoincrement())
+  holidayDate DateTime @unique @map("holiday_date") @db.Date
+  holidayName String   @map("holiday_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("holidays")
+}
+
+model LeaveRecord {
+  id        Int         @id @default(autoincrement())
+  sapId     String      @map("sap_id")
+  leaveDate DateTime    @map("leave_date") @db.Date
+  leaveType String?     @map("leave_type")
+  status    LeaveStatus @default(approved)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [sapId], references: [sapId])
+
+  @@unique([sapId, leaveDate], name: "unique_leave_per_day")
+  @@map("leave_records")
+}
+
+model AppSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
