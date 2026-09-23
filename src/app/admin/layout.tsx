@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
@@ -18,39 +18,55 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "ADMIN PORTAL",
     items: [
-      { name: "Dashboard",            href: "/admin/dashboard",      icon: "📊" },
-      { name: "Employees",            href: "/admin/employees",       icon: "👥" },
-      { name: "Attendance Logs",      href: "/admin/attendance",      icon: "📋" },
-      { name: "Admin Users",          href: "/admin/admins",          icon: "🔑" },
-      { name: "Shift Schedule",       href: "/admin/shifts",          icon: "⚙️" },
-      { name: "Shift Change Requests",href: "/admin/shift-requests",  icon: "🔄" },
-      { name: "Leave & Holidays",     href: "/admin/leave",           icon: "🏖️" },
-      { name: "Export Attendance",    href: "/admin/export",          icon: "📥" },
-      { name: "Settings",             href: "/admin/settings",        icon: "🛠️" },
+      { name: "Dashboard",             href: "/admin/dashboard",      icon: "📊" },
+      { name: "Employees",             href: "/admin/employees",       icon: "👥" },
+      { name: "Attendance Logs",       href: "/admin/attendance",      icon: "📋" },
+      { name: "Admin Users",           href: "/admin/admins",          icon: "🔑" },
+      { name: "Shift Schedule",        href: "/admin/shifts",          icon: "⚙️" },
+      { name: "Shift Change Requests", href: "/admin/shift-requests",  icon: "🔄" },
+      { name: "Leave & Holidays",      href: "/admin/leave",           icon: "🏖️" },
+      { name: "Export Attendance",     href: "/admin/export",          icon: "📥" },
+      { name: "Settings",              href: "/admin/settings",        icon: "🛠️" },
     ],
   },
 ];
 
+// Create supabase client once outside component to avoid re-creation on every render
+const supabase = createClient();
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pageTitle, setPageTitle] = useState("Admin Panel");
+  const checkedRef = useRef(false);
+
+  // If this is the login page, skip auth check entirely and render children directly
+  const isLoginPage = pathname === "/admin/login";
 
   useEffect(() => {
-    if (pathname === "/admin/login") {
+    // On login page, no auth check needed
+    if (isLoginPage) {
       setLoading(false);
       return;
     }
 
+    // Only check once per mount, avoid infinite loops
+    if (checkedRef.current) return;
+    checkedRef.current = true;
+
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.replace("/admin/login"); return; }
-      setEmail(user.email ?? "Admin");
-      setLoading(false);
+      if (!user) {
+        router.replace("/admin/login");
+      } else {
+        setEmail(user.email ?? "Admin");
+        setLoading(false);
+      }
+    }).catch(() => {
+      router.replace("/admin/login");
     });
-  }, [pathname, router, supabase]);
+  }, [isLoginPage, router]);
 
   useEffect(() => {
     const allItems = NAV_SECTIONS.flatMap(s => s.items);
@@ -60,17 +76,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    checkedRef.current = false;
     router.push("/admin/login");
     router.refresh();
   };
 
-  if (pathname === "/admin/login") {
+  // Render login page without any sidebar/header wrapper
+  if (isLoginPage) {
     return <>{children}</>;
   }
 
+  // Show loading while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
         <div style={{ textAlign: "center" }}>
           <div className="spinner" style={{ margin: "0 auto 12px" }} />
           <div className="hint">Loading admin portal…</div>
@@ -85,7 +104,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="admin-wrapper">
       {/* ===== SIDEBAR ===== */}
       <aside className="sidebar">
-        {/* Brand */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-icon">IV</div>
           <div>
@@ -94,7 +112,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="sidebar-nav">
           {NAV_SECTIONS.map(section => (
             <div key={section.label}>
@@ -109,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`sidebar-item ${pathname === item.href || pathname.startsWith(item.href + "/") ? "active" : ""}`}
+                    className={`sidebar-item ${pathname === item.href ? "active" : ""}`}
                   >
                     <span className="sidebar-item-icon">{item.icon}</span>
                     {item.name}
@@ -120,7 +137,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        {/* Sidebar Footer */}
         <div className="sidebar-footer">
           <div className="sidebar-user">👤 {email}</div>
           <button className="btn btn-danger btn-sm w-full" onClick={handleLogout}>
@@ -131,7 +147,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* ===== MAIN AREA ===== */}
       <div className="admin-main">
-        {/* Top Header */}
         <header className="admin-topbar">
           <div className="admin-topbar-title">{pageTitle}</div>
           <div className="admin-topbar-right">
@@ -145,12 +160,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="admin-content">
           {children}
         </main>
 
-        {/* Footer */}
         <footer className="admin-footer">
           © {new Date().getFullYear()} IV Attendance Tracker — Internal HR System · All rights reserved
         </footer>
